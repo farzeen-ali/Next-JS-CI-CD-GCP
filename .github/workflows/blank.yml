@@ -1,0 +1,42 @@
+name: NestJS CI Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: auth
+        name: Authentication to Google Cloud
+        uses: google-github-actions/auth@v2
+
+        with:
+          token_format: access_token
+
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: mygithubcicd@${{secrets.GCP_PROJECT_ID}}.iam.gserviceaccount.com
+
+      - name: Docker Auth
+        run: |
+          echo '${{ steps.auth.outputs.access_token}}' | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+
+      - name: Build and Push Container
+        run: |
+          docker build -t us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID}}/nextjs-repo/app:${{ github.sha}} .
+
+          docker push us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID}}/nextjs-repo/app:${{ github.sha}}
+
+
+
+
+
+        
+    
